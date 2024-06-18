@@ -3,6 +3,25 @@ QMainWindow {
     color: #d9e0ee;
 }
 
+QWidget {
+    background-color: #1e1e2e;
+    color: #d9e0ee;
+}
+
+QPushButton {
+    background-color: #302d41;
+    color: #d9e0ee;
+    border: none;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    border: 1px solid #414868;
+}
+
+QPushButton:hover {
+    background-color: #44475a;
+}
+
 QTableWidget {
     background-color: #1e1e2e;
     alternate-background-color: #302d41;
@@ -17,18 +36,3 @@ QHeaderView::section {
     padding: 5px;
     border: 1px solid #414868;
 }
-
-QTableWidget QTableCornerButton::section {
-    background-color: #302d41;
-    border: 1px solid #414868;
-}
-
-QTableWidget QTableItem {
-    padding: 5px;
-    border: none;
-}
-
-QTableWidget QTableItem:selected {
-    background-color: #414868;
-}
-
