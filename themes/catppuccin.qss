@@ -1,0 +1,34 @@
+QMainWindow {
+    background-color: #1e1e2e;
+    color: #d9e0ee;
+}
+
+QTableWidget {
+    background-color: #1e1e2e;
+    alternate-background-color: #302d41;
+    color: #d9e0ee;
+    gridline-color: #44475a;
+    selection-background-color: #414868;
+}
+
+QHeaderView::section {
+    background-color: #302d41;
+    color: #d9e0ee;
+    padding: 5px;
+    border: 1px solid #414868;
+}
+
+QTableWidget QTableCornerButton::section {
+    background-color: #302d41;
+    border: 1px solid #414868;
+}
+
+QTableWidget QTableItem {
+    padding: 5px;
+    border: none;
+}
+
+QTableWidget QTableItem:selected {
+    background-color: #414868;
+}
+
