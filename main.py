@@ -2,11 +2,70 @@ import sys
 
 import psutil
 import pyqtgraph as pg
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QLabel,
-                             QMainWindow, QPushButton, QStackedWidget,
+from PyQt5.QtCore import QAbstractTableModel, Qt, QTimer, QModelIndex
+from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QLabel,
+                             QMainWindow, QPushButton, QStackedWidget, QTableView,
                              QTableWidget, QTableWidgetItem, QVBoxLayout,
                              QWidget)
+
+class ProcessTableModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.headers = ['Name', 'PID', 'CPU', 'Memory', 'Status']
+        self.processes = []
+
+    def rowCount(self, parent: QModelIndex()):
+        return len(self.processes)
+
+    def columnCount(self, parent: QModelIndex()):
+        return len(self.headers)
+    
+    def data(self, index, role:Qt.DisplayRole):
+        if not index.isValid() or role != Qt.DisplayRole:
+            return None
+        process = self.processes[index.row()]
+        column = index.column()
+
+        if column == 0:
+            return f"{process['name']} ({process['count']})"
+        elif column == 1:
+            return str(process['pid'])
+        elif column == 2:
+            return f"{process['cpu_percent']:.2f}%"
+        elif column == 3:
+            return f"{process['memory_percent']:.2f}%"
+        elif column == 4:
+            return process['status']
+        return None
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self.headers[section]
+        return None
+
+    def updateProcesses(self):
+        processes = {}
+        for process in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+            name = process.info['name']
+            if process.info['pid'] < 1000:
+                name = "SYSTEM"
+            if name not in processes:
+                processes[name] = {
+                    'name': name,
+                    'pid': process.info['pid'],
+                    'cpu_percent': process.info['cpu_percent'],
+                    'memory_percent': process.info['memory_percent'],
+                    'status': process.info['status'],
+                    'count': 1
+                }
+            else:
+                processes[name]['cpu_percent'] += process.info['cpu_percent']
+                processes[name]['memory_percent'] += process.info['memory_percent']
+                processes[name]['count'] += 1
+            
+        self.beginResetModel()
+        self.processes = list(processes.values())
+        self.endResetModel()
 
 
 class HomeWidget(QWidget):
@@ -106,42 +165,19 @@ class TasksWidget(QWidget):
         super().__init__()
         layout = QVBoxLayout()
         self.setLayout(layout)
-        
-        self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(5)
-        self.tableWidget.setHorizontalHeaderLabels(['Name', 'PID', 'CPU', 'Memory', 'Status'])
-        layout.addWidget(self.tableWidget)
-        
-        self.update_process_list()
 
-    def update_process_list(self):
-        self.tableWidget.setRowCount(0)
-        processes = {}
-        for process in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
-            name = process.info['name']
-            if process.info['pid'] < 1000:  # Assuming system processes have PID < 1000
-                name = "SYSTEM"
-            if name not in processes:
-                processes[name] = {
-                    'pid': process.info['pid'],
-                    'cpu_percent': process.info['cpu_percent'],
-                    'memory_percent': process.info['memory_percent'],
-                    'status': process.info['status'],
-                    'count': 1
-                }
-            else:
-                processes[name]['cpu_percent'] += process.info['cpu_percent']
-                processes[name]['memory_percent'] += process.info['memory_percent']
-                processes[name]['count'] += 1
+        self.tableView = QTableView()
+        self.tableModel = ProcessTableModel()
+        self.tableView.setModel(self.tableModel)
+        self.tableView.setEditTriggers(QTableView.NoEditTriggers) # Make Table uneditable
+        layout.addWidget(self.tableView)
 
-        for name, info in processes.items():
-            rowPosition = self.tableWidget.rowCount()
-            self.tableWidget.insertRow(rowPosition)
-            self.tableWidget.setItem(rowPosition, 0, QTableWidgetItem(f"{name} ({info['count']})"))
-            self.tableWidget.setItem(rowPosition, 1, QTableWidgetItem(str(info['pid'])))
-            self.tableWidget.setItem(rowPosition, 2, QTableWidgetItem(f"{info['cpu_percent']:.2f}%"))
-            self.tableWidget.setItem(rowPosition, 3, QTableWidgetItem(f"{info['memory_percent']:.2f}%"))
-            self.tableWidget.setItem(rowPosition, 4, QTableWidgetItem(info['status']))
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.tableModel.updateProcesses)
+        self.timer.start(1000)
+
+        self.tableModel.updateProcesses()
+
 
 class TaskMancer(QMainWindow):
     def __init__(self):
